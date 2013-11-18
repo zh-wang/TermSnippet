@@ -4,7 +4,7 @@ use Cwd qw(abs_path);
 use File::Basename;
 use File::Spec;
 use feature 'say';
-use feature ':5.10';
+use feature ':5.12';
 
 # print color text on terminal 
 # manual: http://perldoc.perl.org/Term/ANSIColor.html
@@ -28,7 +28,7 @@ my $T_COPY_FILE = "Copy file to clipboard -> ";
 # ==== commands ====
 my $CP = " | ";
 my $AVAILABLE_COMMANDS = "Avaiable Commands:";
-my $COMMAND_SHOW_DIR = "[S]how directory";
+my $COMMAND_SHOW_DIR = "[L]ist";
 my $COMMAND_OPEN_DIR_OR_FILE = "[O]pen file or directory";
 my $COMMAND_QUIT = "[Q]uit";
 my $COMMAND_BACK_TO_PARENT = "[B]ack to parent";
@@ -53,7 +53,7 @@ my @files = readdir curDirHandler;
 closedir curDirHandler;
 
 # build command instructions first
-sub ciprint {
+sub printAvailableCommands {
     &aiprint($AVAILABLE_COMMANDS);
     my $commandInstructions = '';
     $commandInstructions.=$COMMAND_SHOW_DIR.$CP;
@@ -74,11 +74,11 @@ my $F_waitingShortcutsInput;
 my $gLastUsedCommand = undef;
 
 # interaction start from here
-&ciprint;
-&generateFileShortcuts;
+&printAvailableCommands;
+&showDir;
 while(my $command = <STDIN>) {
     chomp($command);
-    if ($command ~~ /^S$/i) {
+    if ($command ~~ /^L$/i) {
         &handleCommandShowDir($command);
     } elsif ($command ~~ /^Q$/i) {
         &handleCommandQuit;
@@ -92,7 +92,7 @@ while(my $command = <STDIN>) {
         &handleCommandFileShortcuts($command);
     } else {
         &eprint($ERROR_NO_SUCH_COMMAND); 
-        &ciprint;
+        &printAvailableCommands;
     }
 }
 
@@ -102,7 +102,7 @@ sub handleCommandShowDir {
     $gLastUsedCommand = $COMMAND_SHOW_DIR;
     &userprint($COMMAND_SHOW_DIR);
     &showDir();
-    &ciprint;
+    &printAvailableCommands;
 }
 
 sub handleCommandQuit {
@@ -116,7 +116,7 @@ sub handleCommandBack {
     &userprint($COMMAND_BACK_TO_PARENT);
     # Get parent directory
     say $libDir = dirname($libDir);
-    &ciprint;
+    &printAvailableCommands;
 }
 
 sub handleCommandOpenDir {
@@ -127,6 +127,7 @@ sub handleCommandOpenDir {
         my $fileShortcut = substr($command, 1);
         $fileShortcut =~ tr/[a-z]/[A-Z]/;
         &openByFileShortcut($fileShortcut);
+        &printAvailableCommands;
     }
     $F_waitingShortcutsInput = 1;
 }
@@ -152,7 +153,7 @@ sub handleCommandFileShortcuts {
     } elsif ($gLastUsedCommand eq $COMMAND_COPY_CLIPBOARD) {
         &copyByFileShortcut($fileShortcut);
     }
-    &ciprint;
+    &printAvailableCommands;
 }
 
 # ===================================================
@@ -165,8 +166,7 @@ sub openByFileShortcut {
         return;
     }
     if (-d $file_hash{$fileShortcut}) {
-        &aiprint($T_CHANGE_DIR);
-        say $file_hash{$fileShortcut};
+        &aiprint($T_CHANGE_DIR.$file_hash{$fileShortcut});
         my $nextDir = $file_hash{$fileShortcut};
         if (defined($nextDir)) {
             if (-d $nextDir) {
@@ -219,6 +219,7 @@ sub generateFileShortcuts {
 }
 
 sub showDir {
+    &dprint("showing dir : ".$libDir);
     my $curDir = $libDir;
 
     # clear shortcut hash table
@@ -227,6 +228,7 @@ sub showDir {
     opendir(my $sdir, $curDir) or die "$!";
     close($sdir);
     while(defined(my $file = readdir($sdir))) {
+        &dprint("found file : ".$file);
         next if $file eq '.';
         next if $file eq '..';
         next if $file =~ m#.swp#;
@@ -239,19 +241,19 @@ sub showDir {
         # print colored ['blue'], "D| ".$file."\n";
             print $file." [$hashcode] "."\n";
         }
-        if (-d $file) {
+        if (-d $fullpath) {
             &colorSay('bold blue', $file." [$hashcode] ");
         }
-        if (-S $file) {
+        if (-S $fullpath) {
             print "S|".$file."\n";
         }
-        if (-l $file) {
+        if (-l $fullpath) {
             print "L|".$file."\n";
         }
-        if (-b $file) {
+        if (-b $fullpath) {
             print "B|".$file."\n";
         }
-        if (-c $file) {
+        if (-c $fullpath) {
             print "C|".$file."\n";
         }
     }
