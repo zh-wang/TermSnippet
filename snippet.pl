@@ -11,9 +11,40 @@ use feature ':5.12';
 use Term::ANSIColor;
 use Term::ANSIColor qw(:constants);
 
-my $libDir = '/Users/zhenghongwang/Dropbox/PROG/snippet/';
+my $Script_Home = dirname(abs_path($0));
 
+# ==== debug flag ====
 my $debug;
+
+# running in debug mode?
+$debug = 1 if (defined($ARGV[0]) && $ARGV[0] eq '-d');
+
+# ==== configurable items ====
+my $Snippet_Home = '/Users/zhenghongwang/Dropbox/PROG/snippet/';
+my $Edit_Tool = 'vim';
+
+# read configuration, or use default values
+open CONFIG, "<", $Script_Home."/snippet.cfg" or warn "There is no config file! You should have a TermSnippet.cfg file";
+while (my $configLine = <CONFIG>) {
+    chomp($configLine);
+    my @arr = split(/=/, $configLine) if ($configLine ~~ /=/);
+    if (defined($arr[0])) {
+        given($arr[0]) {
+            when (/^snippet_home$/i) {
+                $Snippet_Home = $arr[1];
+            }
+            when (/^edit_tool$/i) {
+                $Edit_Tool = $arr[1];
+            }
+        }
+    }
+}
+close(CONFIG);
+$Snippet_Home = '/Users/zhenghongwang/Dropbox/PROG/snippet/' unless (defined($Snippet_Home));
+$Edit_Tool = 'vim' unless (defined($Edit_Tool));
+
+&dprint("Snippet_Home=".$Snippet_Home);
+&dprint("Edit_Tool=".$Edit_Tool);
 
 # ==== settings ====
 my $AUTO_SHOW_DIR = 1;
@@ -42,13 +73,7 @@ my $ERROR_NO_SUCH_COMMAND = "ERROR: No such command!";
 # ==== debug messages ====
 my $DEBUG_RUNNING_IN_DEBUG_MODE = "DEBUG: RUNNING IN DEBUG MODE";
 
-# running in debug mode?
-if (defined($ARGV[0]) && $ARGV[0] eq '-d') {
-    $debug = 1;
-    &dprint($DEBUG_RUNNING_IN_DEBUG_MODE);
-}
-
-opendir curDirHandler , $libDir or die "$!";
+opendir curDirHandler , $Snippet_Home or die "$! => $Snippet_Home";
 my @files = readdir curDirHandler;
 closedir curDirHandler;
 
@@ -82,6 +107,7 @@ while(my $command = <STDIN>) {
         &handleCommandShowDir($command);
     } elsif ($command ~~ /^Q$/i) {
         &handleCommandQuit;
+        last;
     } elsif ($command ~~ /^B$/i) {
         &handleCommandBack;
     } elsif ($command ~~ /^O/i) {
@@ -108,14 +134,13 @@ sub handleCommandShowDir {
 sub handleCommandQuit {
     $gLastUsedCommand = $COMMAND_QUIT;
     &userprint($COMMAND_QUIT);
-    last;
 } 
 
 sub handleCommandBack {
     $gLastUsedCommand = $COMMAND_BACK_TO_PARENT;
     &userprint($COMMAND_BACK_TO_PARENT);
     # Get parent directory
-    say $libDir = dirname($libDir);
+    say $Snippet_Home = dirname($Snippet_Home);
     &printAvailableCommands;
 }
 
@@ -170,7 +195,7 @@ sub openByFileShortcut {
         my $nextDir = $file_hash{$fileShortcut};
         if (defined($nextDir)) {
             if (-d $nextDir) {
-                $libDir = $nextDir;
+                $Snippet_Home = $nextDir;
             }
         }
         if ($AUTO_SHOW_DIR) {
@@ -200,7 +225,7 @@ sub copyByFileShortcut {
 # ==================================================
 
 sub generateFileShortcuts {
-    my $curDir = $libDir;
+    my $curDir = $Snippet_Home;
 
     # clear shortcut hash table
     undef %file_hash;
@@ -219,8 +244,8 @@ sub generateFileShortcuts {
 }
 
 sub showDir {
-    &dprint("showing dir : ".$libDir);
-    my $curDir = $libDir;
+    &dprint("showing dir : ".$Snippet_Home);
+    my $curDir = $Snippet_Home;
 
     # clear shortcut hash table
     undef %file_hash;
@@ -305,22 +330,22 @@ sub genHashCode {
     chr($a + 65).chr($b + 65);
 }
 
-&colorSay('red', 'red');
-&colorSay('bold red', 'bold red');
-&colorSay('green', 'green');
-&colorSay('bold green', 'bold green');
-&colorSay('yellow', 'yellow');
-&colorSay('bold yellow', 'bold yellow');
-&colorSay('blue', 'blue');
-&colorSay('bold blue', 'bold blue');
-&colorSay('magenta', 'magenta');
-&colorSay('bold magenta', 'bold magenta');
-&colorSay('cyan', 'cyan');
-&colorSay('bold cyan', 'bold cyan');
-&colorSay('white', 'white');
-&colorSay('bold white', 'bold white');
-&colorSay('black', 'black');
-&colorSay('bold black', 'bold black');
+&colorSay('red', 'red') if $debug;
+&colorSay('bold red', 'bold red') if $debug;
+&colorSay('green', 'green') if $debug;
+&colorSay('bold green', 'bold green') if $debug;
+&colorSay('yellow', 'yellow') if $debug;
+&colorSay('bold yellow', 'bold yellow') if $debug;
+&colorSay('blue', 'blue') if $debug;
+&colorSay('bold blue', 'bold blue') if $debug;
+&colorSay('magenta', 'magenta') if $debug;
+&colorSay('bold magenta', 'bold magenta') if $debug;
+&colorSay('cyan', 'cyan') if $debug;
+&colorSay('bold cyan', 'bold cyan') if $debug;
+&colorSay('white', 'white') if $debug;
+&colorSay('bold white', 'bold white') if $debug;
+&colorSay('black', 'black') if $debug;
+&colorSay('bold black', 'bold black') if $debug;
 
 # The recognized normal foreground color attributes (colors 0 to 7) are:
 # black  red  green  yellow  blue  magenta  cyan  white
@@ -391,6 +416,7 @@ sub eprint {
 # debug
 sub dprint {
     if ($debug) {
+        &colorPrint('bold blue', "<DEBUG INFO>");
         &colorPrint('bold cyan', $_[0]);
         print "\n";
     }
