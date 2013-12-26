@@ -50,8 +50,8 @@ $Edit_Tool = 'vim' unless (defined($Edit_Tool));
 my $AUTO_SHOW_DIR = 1;
 
 # ==== tags for print ====
-my $T_AI = "[[o皿o]]\$ "; # tag for interaction
-my $T_USER = "(^_^) -> "; # tag for user input 
+my $T_PROMPT = "[[o皿o]]\$ "; # tag for interaction
+my $T_ACTION = "(^_^) -> "; # tag for user input 
 my $T_CHANGE_DIR = "Current directory is changed to -> ";
 my $T_OPEN_FILE_VIM = "Open file by vim -> ";
 my $T_COPY_FILE = "Copy file to clipboard -> ";
@@ -90,7 +90,7 @@ sub printAvailableCommands {
 }
 
 # ==== hash table for shortcuts ====
-my %file_hash;
+my %fileShortcutsMap;
 
 # ==== flags for shortcuts input ====
 my $F_waitingShortcutsInput;
@@ -140,7 +140,8 @@ sub handleCommandBack {
     $gLastUsedCommand = $COMMAND_BACK_TO_PARENT;
     &userprint($COMMAND_BACK_TO_PARENT);
     # Get parent directory
-    say $Snippet_Home = dirname($Snippet_Home);
+    $Snippet_Home = dirname($Snippet_Home);
+    &aiprint($T_CHANGE_DIR.$Snippet_Home);
     &printAvailableCommands;
 }
 
@@ -186,13 +187,13 @@ sub handleCommandFileShortcuts {
 sub openByFileShortcut {
     my $fileShortcut = $_[0];
     &dprint("file short cut : $fileShortcut");
-    unless (exists($file_hash{$fileShortcut})) {
+    unless (exists($fileShortcutsMap{$fileShortcut})) {
         &eprint($ERROR_NO_SUCH_FILE_SHORTCUT_EXISTED);
         return;
     }
-    if (-d $file_hash{$fileShortcut}) {
-        &aiprint($T_CHANGE_DIR.$file_hash{$fileShortcut});
-        my $nextDir = $file_hash{$fileShortcut};
+    if (-d $fileShortcutsMap{$fileShortcut}) {
+        &aiprint($T_CHANGE_DIR.$fileShortcutsMap{$fileShortcut});
+        my $nextDir = $fileShortcutsMap{$fileShortcut};
         if (defined($nextDir)) {
             if (-d $nextDir) {
                 $Snippet_Home = $nextDir;
@@ -202,18 +203,18 @@ sub openByFileShortcut {
             &showDir();
         }
     } else {
-        system "vim $file_hash{$fileShortcut}";
+        system "vim $fileShortcutsMap{$fileShortcut}";
     }
 }
 
 sub copyByFileShortcut {
     my $fileShortcut = $_[0];
     &dprint("file copy : $fileShortcut");
-    unless (exists($file_hash{$fileShortcut})) {
+    unless (exists($fileShortcutsMap{$fileShortcut})) {
         &eprint($ERROR_NO_SUCH_FILE_SHORTCUT_EXISTED);
         return;
     }
-    my $pathFileWantCopy = $file_hash{$fileShortcut};
+    my $pathFileWantCopy = $fileShortcutsMap{$fileShortcut};
     if (-f $pathFileWantCopy) {
         &aiprint($T_COPY_FILE.$pathFileWantCopy);
         system "cat $pathFileWantCopy | pbcopy";
@@ -228,7 +229,7 @@ sub generateFileShortcuts {
     my $curDir = $Snippet_Home;
 
     # clear shortcut hash table
-    undef %file_hash;
+    undef %fileShortcutsMap;
 
     opendir(my $sdir, $curDir) or die "$!";
     close($sdir);
@@ -239,7 +240,8 @@ sub generateFileShortcuts {
         # Generate full path
         my $fullpath = File::Spec->catfile($curDir, $file);
         my $hashcode = &genHashCode($file);
-        $file_hash{$hashcode} = $fullpath;
+        #my $hashcode = $file;
+        $fileShortcutsMap{$hashcode} = $fullpath;
     }
 }
 
@@ -248,7 +250,7 @@ sub showDir {
     my $curDir = $Snippet_Home;
 
     # clear shortcut hash table
-    undef %file_hash;
+    undef %fileShortcutsMap;
 
     opendir(my $sdir, $curDir) or die "$!";
     close($sdir);
@@ -260,14 +262,15 @@ sub showDir {
         # Generate full path
         my $fullpath = File::Spec->catfile($curDir, $file);
         my $hashcode = &genHashCode($file);
-        $file_hash{$hashcode} = $fullpath;
+        #my $hashcode = $file;
+        $fileShortcutsMap{$hashcode} = $fullpath;
         if (-f $fullpath) {
         # print colored ['red'], "F| ".$file."\n";
         # print colored ['blue'], "D| ".$file."\n";
             print $file." [$hashcode] "."\n";
         }
         if (-d $fullpath) {
-            &colorSay('bold blue', $file." [$hashcode] ");
+            &colorSay('bold blue', "[D]".$file. " [$hashcode] ");
         }
         if (-S $fullpath) {
             print "S|".$file."\n";
@@ -389,13 +392,13 @@ sub colorSay {
 
 # ai print 
 sub aiprint {
-    &colorPrint('bold white on_yellow', $T_AI);
+    &colorPrint('bold white on_yellow', $T_PROMPT);
     &iprint($_[0]);
 }
 
 # user print 
 sub userprint {
-    &colorPrint('bold white on_green', $T_USER);
+    &colorPrint('bold white on_green', $T_ACTION);
     &colorPrint('green', $_[0]);
     print "\n";
 }
