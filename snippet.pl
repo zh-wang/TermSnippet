@@ -55,6 +55,7 @@ my $T_ACTION = "(^_^) -> "; # tag for user input
 my $T_CHANGE_DIR = "Current directory is changed to -> ";
 my $T_OPEN_FILE_VIM = "Open file by vim -> ";
 my $T_COPY_FILE = "Copy file to clipboard -> ";
+my $T_PREVIEW = "Preview file -> ";
 
 # ==== commands ====
 my $CP = " | ";
@@ -64,10 +65,12 @@ my $COMMAND_OPEN_DIR_OR_FILE = "[O]pen file or directory";
 my $COMMAND_QUIT = "[Q]uit";
 my $COMMAND_BACK_TO_PARENT = "[B]ack to parent";
 my $COMMAND_COPY_CLIPBOARD = "[C]opy";
+my $COMMAND_PREVIEW = "[P]review";
 
 # ==== error messages ====
 my $ERROR_NO_SUCH_FILE_SHORTCUT_EXISTED = "ERROR: No Such file shortcut existed!";
 my $ERROR_CANNOT_COPY_DIRECTORY_CLIPBOARD = "ERROR: Cannot copy directory to clipboard!";
+my $ERROR_CANNOT_PREVIEW_DIRECTORY = "ERROR: Cannot preview a directory, only files can be previewed!";
 my $ERROR_NO_SUCH_COMMAND = "ERROR: No such command!";
 
 # ==== debug messages ====
@@ -83,8 +86,9 @@ sub printAvailableCommands {
     my $commandInstructions = '';
     $commandInstructions.=$COMMAND_SHOW_DIR.$CP;
     $commandInstructions.=$COMMAND_OPEN_DIR_OR_FILE.$CP;
-    $commandInstructions.=$COMMAND_BACK_TO_PARENT.$CP;
+    $commandInstructions.=$COMMAND_PREVIEW.$CP;
     $commandInstructions.=$COMMAND_COPY_CLIPBOARD.$CP;
+    $commandInstructions.=$COMMAND_BACK_TO_PARENT.$CP;
     $commandInstructions.=$COMMAND_QUIT;
     &aiprint($commandInstructions);
 }
@@ -114,8 +118,10 @@ while(my $command = <STDIN>) {
         &handleCommandOpenDir($command);
     } elsif ($command ~~ /^C/i) {
         &handleCommandCopy($command);
+    } elsif ($command ~~ /^P/i) {
+        &handleCommandPreview($command);
     } elsif ($F_waitingShortcutsInput) {
-        &handleCommandFileShortcuts($command);
+        &handleFileShortcuts($command);
     } else {
         &eprint($ERROR_NO_SUCH_COMMAND); 
         &printAvailableCommands;
@@ -170,7 +176,19 @@ sub handleCommandCopy {
     $F_waitingShortcutsInput = 1;
 }
 
-sub handleCommandFileShortcuts {
+sub handleCommandPreview {
+    my $command = $_[0];
+    $gLastUsedCommand = $COMMAND_PREVIEW;
+    &userprint($COMMAND_PREVIEW);
+    if (length($command) > 1) {
+        my $fileShortcut = substr($command, 1);
+        $fileShortcut =~ tr/[a-z]/[A-Z]/;
+        &previewByFileShortcut($fileShortcut);
+    }
+    &printAvailableCommands;
+}
+
+sub handleFileShortcuts {
     my $fileShortcut = $_[0];
     $fileShortcut =~ tr/[a-z]/[A-Z]/;
     if ($gLastUsedCommand eq $COMMAND_OPEN_DIR_OR_FILE) {
@@ -220,6 +238,22 @@ sub copyByFileShortcut {
         system "cat $pathFileWantCopy | pbcopy";
     } else {
         &eprint($ERROR_CANNOT_COPY_DIRECTORY_CLIPBOARD);
+    }
+}
+
+sub previewByFileShortcut {
+    my $fileShortcut = $_[0];
+    &dprint("preview file : $fileShortcut");
+    unless (exists($fileShortcutsMap{$fileShortcut})) {
+        &eprint($ERROR_NO_SUCH_FILE_SHORTCUT_EXISTED);
+        return;
+    }
+    my $pathFileWantCopy = $fileShortcutsMap{$fileShortcut};
+    if (-f $pathFileWantCopy) {
+        &aiprint($T_PREVIEW.$pathFileWantCopy);
+        system "cat $pathFileWantCopy";
+    } else {
+        &eprint($ERROR_CANNOT_PREVIEW_DIRECTORY);
     }
 }
 
