@@ -19,11 +19,11 @@ my $debug;
 # running in debug mode?
 $debug = 1 if (defined($ARGV[0]) && $ARGV[0] eq '-d');
 
-# ==== configurable items ====
+# ==== configurable items ====#{{{
 my $Snippet_Home = '/Users/zhenghongwang/Dropbox/PROG/snippet/';
-my $Edit_Tool = 'vim';
+my $Edit_Tool = 'vim';#}}}
 
-# read configuration, or use default values
+# ==== read configuration, or use default values ==== #{{{
 open CONFIG, "<", $Script_Home."/snippet.cfg" or warn "There is no config file! You should have a TermSnippet.cfg file";
 while (my $configLine = <CONFIG>) {
     chomp($configLine);
@@ -44,54 +44,36 @@ $Snippet_Home = '/Users/zhenghongwang/Dropbox/PROG/snippet/' unless (defined($Sn
 $Edit_Tool = 'vim' unless (defined($Edit_Tool));
 
 &dprint("Snippet_Home=".$Snippet_Home);
-&dprint("Edit_Tool=".$Edit_Tool);
+&dprint("Edit_Tool=".$Edit_Tool);#}}}
 
-# ==== settings ====
-my $AUTO_SHOW_DIR = 1;
+# ==== interaction settings ====#{{{
+my $AUTO_SHOW_DIR = 1;#}}}
 
-# ==== tags for print ====
+# ==== tags for print ====#{{{
 my $T_PROMPT = "[[o皿o]]\$ "; # tag for interaction
 my $T_ACTION = "(^_^) -> "; # tag for user input 
 my $T_CHANGE_DIR = "Current directory is changed to -> ";
 my $T_OPEN_FILE_VIM = "Open file by vim -> ";
 my $T_COPY_FILE = "Copy file to clipboard -> ";
-my $T_PREVIEW = "Preview file -> ";
+my $T_PREVIEW = "Preview file -> ";#}}}
 
-# ==== commands ====
-my $CP = " | ";
+# ==== commands ====#{{{
+my $SYMBOL_STICK = " | ";
 my $AVAILABLE_COMMANDS = "Avaiable Commands:";
 my $COMMAND_SHOW_DIR = "[L]ist";
 my $COMMAND_OPEN_DIR_OR_FILE = "[O]pen file or directory";
 my $COMMAND_QUIT = "[Q]uit";
 my $COMMAND_BACK_TO_PARENT = "[B]ack to parent";
 my $COMMAND_COPY_CLIPBOARD = "[C]opy";
-my $COMMAND_PREVIEW = "[P]review";
+my $COMMAND_PREVIEW = "[P]review";#}}}
 
-# ==== error messages ====
+# ==== error and debug messages ====#{{{
 my $ERROR_NO_SUCH_FILE_SHORTCUT_EXISTED = "ERROR: No Such file shortcut existed!";
 my $ERROR_CANNOT_COPY_DIRECTORY_CLIPBOARD = "ERROR: Cannot copy directory to clipboard!";
 my $ERROR_CANNOT_PREVIEW_DIRECTORY = "ERROR: Cannot preview a directory, only files can be previewed!";
 my $ERROR_NO_SUCH_COMMAND = "ERROR: No such command!";
 
-# ==== debug messages ====
-my $DEBUG_RUNNING_IN_DEBUG_MODE = "DEBUG: RUNNING IN DEBUG MODE";
-
-opendir curDirHandler , $Snippet_Home or die "$! => $Snippet_Home";
-my @files = readdir curDirHandler;
-closedir curDirHandler;
-
-# build command instructions first
-sub printAvailableCommands {
-    &aiprint($AVAILABLE_COMMANDS);
-    my $commandInstructions = '';
-    $commandInstructions.=$COMMAND_SHOW_DIR.$CP;
-    $commandInstructions.=$COMMAND_OPEN_DIR_OR_FILE.$CP;
-    $commandInstructions.=$COMMAND_PREVIEW.$CP;
-    $commandInstructions.=$COMMAND_COPY_CLIPBOARD.$CP;
-    $commandInstructions.=$COMMAND_BACK_TO_PARENT.$CP;
-    $commandInstructions.=$COMMAND_QUIT;
-    &aiprint($commandInstructions);
-}
+my $DEBUG_RUNNING_IN_DEBUG_MODE = "DEBUG: RUNNING IN DEBUG MODE";#}}}
 
 # ==== hash table for shortcuts ====
 my %fileShortcutsMap;
@@ -102,7 +84,7 @@ my $F_waitingShortcutsInput;
 # ==== last used command ====
 my $gLastUsedCommand = undef;
 
-# interaction start from here
+# ==== interaction start from here ====#{{{
 &printAvailableCommands;
 &showDir;
 while(my $command = <STDIN>) {
@@ -126,10 +108,9 @@ while(my $command = <STDIN>) {
         &eprint($ERROR_NO_SUCH_COMMAND); 
         &printAvailableCommands;
     }
-}
+}#}}}
 
-# command handlers 
-# ===================================================
+# ==== command handlers ==== #{{{
 sub handleCommandShowDir {
     $gLastUsedCommand = $COMMAND_SHOW_DIR;
     &userprint($COMMAND_SHOW_DIR);
@@ -198,9 +179,21 @@ sub handleFileShortcuts {
         &copyByFileShortcut($fileShortcut);
     }
     &printAvailableCommands;
-}
+}#}}}
 
-# ===================================================
+# ==== methods ====#{{{
+# build command instructions first
+sub printAvailableCommands {
+    &aiprint($AVAILABLE_COMMANDS);
+    my $commandInstructions = '';
+    $commandInstructions.=$COMMAND_SHOW_DIR.$SYMBOL_STICK;
+    $commandInstructions.=$COMMAND_OPEN_DIR_OR_FILE.$SYMBOL_STICK;
+    $commandInstructions.=$COMMAND_PREVIEW.$SYMBOL_STICK;
+    $commandInstructions.=$COMMAND_COPY_CLIPBOARD.$SYMBOL_STICK;
+    $commandInstructions.=$COMMAND_BACK_TO_PARENT.$SYMBOL_STICK;
+    $commandInstructions.=$COMMAND_QUIT;
+    &aiprint($commandInstructions);
+}
 
 sub openByFileShortcut {
     my $fileShortcut = $_[0];
@@ -365,8 +358,9 @@ sub genHashCode {
     my $a = $hash/23;
     my $b = $hash%23;
     chr($a + 65).chr($b + 65);
-}
+}#}}}
 
+# ==== print color tags ==== #{{{
 &colorSay('red', 'red') if $debug;
 &colorSay('bold red', 'bold red') if $debug;
 &colorSay('green', 'green') if $debug;
@@ -469,4 +463,4 @@ sub iprint {
 sub wprint {
     &colorPrint('bold magenta', $_[0]);
     print "\n";
-}
+}#}}}
